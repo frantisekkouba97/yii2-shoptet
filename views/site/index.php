@@ -19,10 +19,14 @@ $this->title = 'Produkty';
 
     <?php Pjax::begin(); ?>
     <?= GridView::widget([
-        'dataProvider' => $dataProvider,
-        'tableOptions' => ['class' => 'table table-striped table-hover align-middle'],
+    'dataProvider' => $dataProvider,
+        'tableOptions' => [
+            'class' => 'table table-striped table-hover align-middle',
+        ],
         'columns' => [
-            ['class' => 'yii\grid\SerialColumn'],
+            [
+                'class' => 'yii\grid\SerialColumn',
+            ],
             'name:text:Název',
             'code:text:Kód',
             [
@@ -30,29 +34,38 @@ $this->title = 'Produkty';
                 'format' => 'raw',
                 'label' => 'URL',
                 'value' => function ($model) {
-                    /* @var $model app\models\Product */
-                    return $model->url ? Html::a('Odkaz', $model->url, ['target' => '_blank', 'rel' => 'noopener']) : '';
-                }
+                    /** @var app\models\Product $model */
+                    return $model->url ? Html::a('Odkaz', $model->url, [
+                        'target' => '_blank',
+                        'rel' => 'noopener',
+                    ]) : '';
+                },
             ],
             [
-                    'attribute' => 'image_url',
-                    'format' => 'raw',
-                    'label' => 'Obrázek',
-                    'value' => function ($model) {
-                        /* @var $model app\models\Product */
-                        return $model->image_url ? Html::img($model->image_url, ['style' => 'width:60px;height:auto;border-radius:4px;']) : '';
-                    },
-                    'contentOptions' => ['style' => 'width:70px;'],
+                'attribute' => 'image_url',
+                'format' => 'raw',
+                'label' => 'Obrázek',
+                'value' => function ($model) {
+                    /** @var app\models\Product $model */
+                    return $model->image_url ? Html::img($model->image_url, [
+                        'style' => 'width:60px;height:auto;border-radius:4px;',
+                    ]) : '';
+                },
+                'contentOptions' => [
+                    'style' => 'width:70px;',
+                ],
             ],
             [
                 'attribute' => 'stock_qty',
                 'label' => 'Sklad',
                 'contentOptions' => function ($model) {
-                    $qty = (int)$model->stock_qty;
+                    $qty = (int) $model->stock_qty;
                     $class = $qty > 0 ? 'text-success fw-semibold' : 'text-danger';
-                    return ['class' => $class];
+                    return [
+                        'class' => $class,
+                    ];
                 },
-                'value' => function ($model) { return $model->stock_qty; }
+                'value' => function ($model) { return $model->stock_qty; },
             ],
             [
                 'class' => 'yii\grid\ActionColumn',
@@ -61,24 +74,30 @@ $this->title = 'Produkty';
                     'detail' => function ($url, $model) {
                         return Html::button('Detail', [
                             'class' => 'btn btn-sm btn-primary',
-                            'onclick' => 'showDetail(' . (int)$model->id . ')'
+                            'onclick' => 'showDetail(' . (int) $model->id . ')',
                         ]);
                     },
                     'updateDesc' => function ($url, $model) {
                         return Html::button('Upravit popis', [
                             'class' => 'btn btn-sm btn-outline-secondary',
-                            'onclick' => 'updateDescription(' . (int)$model->id . ', this)'
+                            'onclick' => 'updateDescription(' . (int) $model->id . ', this)',
                         ]);
                     },
                 ],
             ],
         ],
         'pager' => [
-            'options' => ['class' => 'pagination justify-content-center'],
-            'linkContainerOptions' => ['class' => 'page-item'],
-            'linkOptions' => ['class' => 'page-link'],
+            'options' => [
+                'class' => 'pagination justify-content-center',
+            ],
+            'linkContainerOptions' => [
+                'class' => 'page-item',
+            ],
+            'linkOptions' => [
+                'class' => 'page-link',
+            ],
         ],
-    ]); ?>
+]); ?>
     <?php Pjax::end(); ?>
 </div>
 
@@ -107,10 +126,10 @@ $detailUrl = Yii::$app->urlManager->createUrl(['site/detail']);
 $updateUrl = Yii::$app->urlManager->createUrl(['site/update-description']);
 $csrfParam = Yii::$app->request->csrfParam;
 $csrfToken = Yii::$app->request->getCsrfToken();
-$vars = "var detailUrl = " . json_encode($detailUrl) . ";"
-      . " var updateUrl = " . json_encode($updateUrl) . ";"
-      . " var csrfParam = " . json_encode($csrfParam) . ";"
-      . " var csrfToken = " . json_encode($csrfToken) . ";";
+$vars = 'var detailUrl = ' . json_encode($detailUrl) . ';'
+      . ' var updateUrl = ' . json_encode($updateUrl) . ';'
+      . ' var csrfParam = ' . json_encode($csrfParam) . ';'
+      . ' var csrfToken = ' . json_encode($csrfToken) . ';';
 $this->registerJs($vars, \yii\web\View::POS_END);
 $js = <<<'JS'
 window.showDetail = function(id) {

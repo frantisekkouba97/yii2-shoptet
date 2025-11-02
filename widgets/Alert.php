@@ -19,9 +19,6 @@ use Yii;
  * ```php
  * Yii::$app->session->setFlash('error', ['Error 1', 'Error 2']);
  * ```
- *
- * @author Kartik Visweswaran <kartikv2@gmail.com>
- * @author Alexander Makarov <sam@rmcreative.ru>
  */
 class Alert extends \yii\bootstrap5\Widget
 {
@@ -32,22 +29,19 @@ class Alert extends \yii\bootstrap5\Widget
      * - value: the bootstrap alert type (i.e. danger, success, info, warning)
      */
     public $alertTypes = [
-        'error'   => 'alert-danger',
-        'danger'  => 'alert-danger',
+        'error' => 'alert-danger',
+        'danger' => 'alert-danger',
         'success' => 'alert-success',
-        'info'    => 'alert-info',
-        'warning' => 'alert-warning'
+        'info' => 'alert-info',
+        'warning' => 'alert-warning',
     ];
+
     /**
      * @var array the options for rendering the close button tag.
      * Array will be passed to [[\yii\bootstrap\Alert::closeButton]].
      */
     public $closeButton = [];
 
-
-    /**
-     * {@inheritdoc}
-     */
     public function run()
     {
         $session = Yii::$app->session;

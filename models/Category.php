@@ -37,18 +37,23 @@ class Category extends ActiveRecord
     {
         return [
             [['shoptet_id', 'name'], 'required'],
-            [['shoptet_id'], 'string', 'max' => 64],
-            [['name'], 'string', 'max' => 512],
+            [['shoptet_id'],
+                'string',
+                'max' => 64],
+            [['name'],
+                'string',
+                'max' => 512],
             [['shoptet_id'], 'unique'],
         ];
     }
 
-    /**
-     * @return ActiveQuery
-     */
     public function getProducts(): ActiveQuery
     {
-        return $this->hasMany(Product::class, ['id' => 'product_id'])
-            ->viaTable('product_category', ['category_id' => 'id']);
+        return $this->hasMany(Product::class, [
+            'id' => 'product_id',
+        ])
+            ->viaTable('product_category', [
+                'category_id' => 'id',
+            ]);
     }
 }

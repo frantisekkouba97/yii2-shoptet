@@ -44,20 +44,29 @@ class Product extends ActiveRecord
             [['guid', 'name'], 'required'],
             [['description'], 'string'],
             [['stock_qty'], 'integer'],
-            [['guid'], 'string', 'max' => 64],
-            [['code'], 'string', 'max' => 128],
-            [['name'], 'string', 'max' => 512],
-            [['url', 'image_url'], 'string', 'max' => 1024],
+            [['guid'],
+                'string',
+                'max' => 64],
+            [['code'],
+                'string',
+                'max' => 128],
+            [['name'],
+                'string',
+                'max' => 512],
+            [['url', 'image_url'],
+                'string',
+                'max' => 1024],
             [['guid'], 'unique'],
         ];
     }
 
-    /**
-     * @return ActiveQuery
-     */
     public function getCategories(): ActiveQuery
     {
-        return $this->hasMany(Category::class, ['id' => 'category_id'])
-            ->viaTable('product_category', ['product_id' => 'id']);
+        return $this->hasMany(Category::class, [
+            'id' => 'category_id',
+        ])
+            ->viaTable('product_category', [
+                'product_id' => 'id',
+            ]);
     }
 }

@@ -9,13 +9,16 @@ use Yii;
 class ShoptetClient
 {
     private Client $client;
+
     private string $token;
+
     private int $sleepMs;
+
     private ?array $imageCuts = null;
 
     public function __construct(string $token = '', int $sleepMs = 300)
     {
-        $this->token = $token ?: (string)(Yii::$app->params['shoptetPrivateApiToken'] ?? '');
+        $this->token = $token ?: (string) (Yii::$app->params['shoptetPrivateApiToken'] ?? '');
         $this->sleepMs = $sleepMs;
         $this->client = new Client([
             'base_uri' => 'https://api.myshoptet.com',
@@ -28,37 +31,6 @@ class ShoptetClient
         ]);
     }
 
-    private function sleep(): void
-    {
-        if ($this->sleepMs > 0) {
-            usleep($this->sleepMs * 1000);
-        }
-    }
-
-    private function request(string $method, string $uri, array $options = [])
-    {
-        $attempts = 0;
-        start:
-
-        try {
-            $response = $this->client->request($method, $uri, $options);
-            $this->sleep();
-
-            return json_decode((string)$response->getBody(), true);
-
-        } catch (RequestException $e) {
-            $status = $e->getResponse() ? $e->getResponse()->getStatusCode() : 0;
-
-            if ($status === 429 && $attempts < 3) {
-                $attempts++;
-                usleep(($this->sleepMs + 200 * $attempts) * 1000);
-                goto start;
-            }
-
-            throw $e;
-        }
-    }
-
     public function listProducts(int $page = 1, int $perPage = 100, array $includes = []): array
     {
         $query = [
@@ -66,7 +38,7 @@ class ShoptetClient
             'itemsPerPage' => $perPage,
         ];
 
-        if (!empty($includes)) {
+        if (! empty($includes)) {
             $query['include'] = implode(',', $includes);
         }
 
@@ -79,7 +51,7 @@ class ShoptetClient
     {
         $query = [];
 
-        if (!empty($includes)) {
+        if (! empty($includes)) {
             $query['include'] = implode(',', $includes);
         }
 
@@ -108,7 +80,7 @@ class ShoptetClient
     {
         $query = [];
 
-        if (!empty($includes)) {
+        if (! empty($includes)) {
             $query['include'] = implode(',', $includes);
         }
 
@@ -123,25 +95,13 @@ class ShoptetClient
         return $data;
     }
 
-    private function getImageCuts(): array
-    {
-        if ($this->imageCuts === null) {
-            $this->getEshopInfo(['imageCuts']);
-            if ($this->imageCuts === null) {
-                $this->imageCuts = [];
-            }
-        }
-
-        return $this->imageCuts;
-    }
-
     /**
      * Build full image URL from mainImage descriptor using e-shop imageCuts.
      * Prefers CDN path and the given cut (default "big"), falls back to "orig".
      */
     public function buildImageUrl(?array $image, string $preferredCut = 'big'): ?string
     {
-        if (!$image) {
+        if (! $image) {
             return null;
         }
 
@@ -181,5 +141,49 @@ class ShoptetClient
         }
 
         return null;
+    }
+
+    private function sleep(): void
+    {
+        if ($this->sleepMs > 0) {
+            usleep($this->sleepMs * 1000);
+        }
+    }
+
+    private function request(string $method, string $uri, array $options = [])
+    {
+        $attempts = 0;
+        start:
+
+        try {
+            $response = $this->client->request($method, $uri, $options);
+            $this->sleep();
+
+            return json_decode((string) $response->getBody(), true);
+
+        } catch (RequestException $e) {
+            $status = $e->getResponse() ? $e->getResponse()
+                ->getStatusCode() : 0;
+
+            if ($status === 429 && $attempts < 3) {
+                $attempts++;
+                usleep(($this->sleepMs + 200 * $attempts) * 1000);
+                goto start;
+            }
+
+            throw $e;
+        }
+    }
+
+    private function getImageCuts(): array
+    {
+        if ($this->imageCuts === null) {
+            $this->getEshopInfo(['imageCuts']);
+            if ($this->imageCuts === null) {
+                $this->imageCuts = [];
+            }
+        }
+
+        return $this->imageCuts;
     }
 }

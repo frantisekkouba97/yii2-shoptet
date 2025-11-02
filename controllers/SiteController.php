@@ -6,15 +6,12 @@ use app\components\ShoptetClient;
 use app\models\Product;
 use Yii;
 use yii\data\ActiveDataProvider;
+use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\Response;
-use yii\filters\VerbFilter;
 
 class SiteController extends Controller
 {
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors()
     {
         return [
@@ -28,9 +25,6 @@ class SiteController extends Controller
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function actions()
     {
         return [
@@ -50,9 +44,15 @@ class SiteController extends Controller
     public function actionIndex(): string
     {
         $dataProvider = new ActiveDataProvider([
-            'query' => Product::find()->with('categories')->orderBy(['id' => SORT_DESC]),
+            'query' => Product::find()->with('categories'),
             'pagination' => [
                 'pageSize' => 20,
+            ],
+            'sort' => [
+                'defaultOrder' => [
+                    'id' => SORT_DESC,
+                ],
+                'attributes' => ['id', 'name', 'code', 'url', 'image_url', 'stock_qty'],
             ],
         ]);
 
@@ -69,8 +69,11 @@ class SiteController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
         $product = Product::findOne($id);
 
-        if (!$product) {
-            return ['success' => false, 'error' => 'Product not found'];
+        if (! $product) {
+            return [
+                'success' => false,
+                'error' => 'Product not found',
+            ];
         }
 
         $client = new ShoptetClient();
@@ -84,7 +87,7 @@ class SiteController extends Controller
             $data = $detail['data'] ?? [];
 
             // Price: use first variant price + currencyCode if present
-            if (!empty($data['variants'][0])) {
+            if (! empty($data['variants'][0])) {
                 $variant = $data['variants'][0];
                 if (isset($variant['price']) && isset($variant['currencyCode'])) {
                     $priceText = $variant['price'] . ' ' . $variant['currencyCode'];
@@ -94,7 +97,7 @@ class SiteController extends Controller
             }
 
             // Categories (requires include=allCategories)
-            if (!empty($data['categories']) && is_array($data['categories'])) {
+            if (! empty($data['categories']) && is_array($data['categories'])) {
                 foreach ($data['categories'] as $category) {
                     $name = $category['name'] ?? '';
                     if ($name !== '') {
@@ -104,7 +107,7 @@ class SiteController extends Controller
             }
 
             // Image
-            if (!empty($data['mainImage']) && is_array($data['mainImage'])) {
+            if (! empty($data['mainImage']) && is_array($data['mainImage'])) {
                 $built = $client->buildImageUrl($data['mainImage']);
                 if ($built) {
                     $imageUrl = $built;
@@ -112,7 +115,7 @@ class SiteController extends Controller
             }
 
             // Stock: sum variant stocks
-            if (!empty($data['variants']) && is_array($data['variants'])) {
+            if (! empty($data['variants']) && is_array($data['variants'])) {
                 $sum = 0.0;
                 foreach ($data['variants'] as $variant) {
                     if (isset($variant['stock']) && $variant['stock'] !== '') {
@@ -151,8 +154,11 @@ class SiteController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
         $product = Product::findOne($id);
 
-        if (!$product) {
-            return ['success' => false, 'error' => 'Product not found'];
+        if (! $product) {
+            return [
+                'success' => false,
+                'error' => 'Product not found',
+            ];
         }
 
         $prefix = 'testFrantisek ';
@@ -169,10 +175,15 @@ class SiteController extends Controller
             $product->description = $newDesc;
             $product->save(false);
 
-            return ['success' => true];
+            return [
+                'success' => true,
+            ];
 
         } catch (\Throwable $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
         }
     }
 }

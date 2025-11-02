@@ -2,13 +2,13 @@
 
 namespace app\controllers;
 
+use app\components\ShoptetClient;
+use app\models\Product;
 use Yii;
-use yii\filters\AccessControl;
+use yii\data\ActiveDataProvider;
 use yii\web\Controller;
 use yii\web\Response;
 use yii\filters\VerbFilter;
-use app\models\LoginForm;
-use app\models\ContactForm;
 
 class SiteController extends Controller
 {
@@ -18,21 +18,11 @@ class SiteController extends Controller
     public function behaviors()
     {
         return [
-            'access' => [
-                'class' => AccessControl::class,
-                'only' => ['logout'],
-                'rules' => [
-                    [
-                        'actions' => ['logout'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
-                ],
-            ],
             'verbs' => [
                 'class' => VerbFilter::class,
                 'actions' => [
-                    'logout' => ['post'],
+                    'update-description' => ['post'],
+                    'detail' => ['get'],
                 ],
             ],
         ];
@@ -55,74 +45,134 @@ class SiteController extends Controller
     }
 
     /**
-     * Displays homepage.
-     *
-     * @return string
+     * Homepage with product list.
      */
-    public function actionIndex()
+    public function actionIndex(): string
     {
-        return $this->render('index');
-    }
+        $dataProvider = new ActiveDataProvider([
+            'query' => Product::find()->with('categories')->orderBy(['id' => SORT_DESC]),
+            'pagination' => [
+                'pageSize' => 20,
+            ],
+        ]);
 
-    /**
-     * Login action.
-     *
-     * @return Response|string
-     */
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
-
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
-        }
-
-        $model->password = '';
-        return $this->render('login', [
-            'model' => $model,
+        return $this->render('index', [
+            'dataProvider' => $dataProvider,
         ]);
     }
 
     /**
-     * Logout action.
-     *
-     * @return Response
+     * Returns product detail JSON with current price and categories.
      */
-    public function actionLogout()
+    public function actionDetail(int $id): array
     {
-        Yii::$app->user->logout();
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $product = Product::findOne($id);
 
-        return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
+        if (!$product) {
+            return ['success' => false, 'error' => 'Product not found'];
         }
-        return $this->render('contact', [
-            'model' => $model,
-        ]);
+
+        $client = new ShoptetClient();
+        $priceText = null;
+        $categories = [];
+        $imageUrl = $product->image_url;
+        $stockQty = $product->stock_qty;
+
+        try {
+            $detail = $client->getProductDetail($product->guid, ['images', 'allCategories', 'perPricelistPrices']);
+            $data = $detail['data'] ?? [];
+
+            // Price: use first variant price + currencyCode if present
+            if (!empty($data['variants'][0])) {
+                $variant = $data['variants'][0];
+                if (isset($variant['price']) && isset($variant['currencyCode'])) {
+                    $priceText = $variant['price'] . ' ' . $variant['currencyCode'];
+                } elseif (isset($variant['price'])) {
+                    $priceText = (string) $variant['price'];
+                }
+            }
+
+            // Categories (requires include=allCategories)
+            if (!empty($data['categories']) && is_array($data['categories'])) {
+                foreach ($data['categories'] as $category) {
+                    $name = $category['name'] ?? '';
+                    if ($name !== '') {
+                        $categories[] = $name;
+                    }
+                }
+            }
+
+            // Image
+            if (!empty($data['mainImage']) && is_array($data['mainImage'])) {
+                $built = $client->buildImageUrl($data['mainImage']);
+                if ($built) {
+                    $imageUrl = $built;
+                }
+            }
+
+            // Stock: sum variant stocks
+            if (!empty($data['variants']) && is_array($data['variants'])) {
+                $sum = 0.0;
+                foreach ($data['variants'] as $variant) {
+                    if (isset($variant['stock']) && $variant['stock'] !== '') {
+                        $sum += (float) $variant['stock'];
+                    }
+                }
+                $stockQty = (int) round($sum);
+            }
+        } catch (\Throwable $e) {
+        }
+
+        if (empty($categories)) {
+            $categories = array_map(static function ($c) { return $c->name; }, $product->categories);
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'name' => $product->name,
+                'code' => $product->code,
+                'price' => $priceText,
+                'categories' => $categories,
+                'url' => $product->url,
+                'imageUrl' => $imageUrl,
+                'stock' => $stockQty,
+                'description' => $product->description,
+            ],
+        ];
     }
 
     /**
-     * Displays about page.
-     *
-     * @return string
+     * Updates product description by prefixing with "testFrantisek".
      */
-    public function actionAbout()
+    public function actionUpdateDescription(int $id): array
     {
-        return $this->render('about');
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $product = Product::findOne($id);
+
+        if (!$product) {
+            return ['success' => false, 'error' => 'Product not found'];
+        }
+
+        $prefix = 'testFrantisek ';
+        $newDesc = $product->description ?? '';
+
+        if (stripos($newDesc, $prefix) !== 0) {
+            $newDesc = $prefix . $newDesc;
+        }
+
+        $client = new ShoptetClient();
+
+        try {
+            $client->updateProductDescription($product->guid, $newDesc);
+            $product->description = $newDesc;
+            $product->save(false);
+
+            return ['success' => true];
+
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
     }
 }

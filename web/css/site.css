@@ -86,3 +86,9 @@ a.desc:after {
 .form-group {
     margin-bottom: 1rem;
 }
+
+/* Hide prev/next arrows when disabled (first/last page) */
+.pagination .page-item.prev.disabled span,
+.pagination .page-item.next.disabled span {
+    display: none;
+}
